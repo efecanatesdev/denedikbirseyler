@@ -1,0 +1,436 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Heart Radio Ultimate+</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background: linear-gradient(to bottom,#121212,#000);
+  color:white;
+  transition: background 0.8s ease;
+}
+
+#heartCanvas{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  z-index:0;
+}
+
+.container{
+  display:flex;
+  height:100vh;
+  position:relative;
+  z-index:1;
+}
+
+.sidebar{
+  width:300px;
+  background:#000;
+  padding:20px;
+  overflow-y:auto;
+}
+
+.song{
+  padding:10px;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.song:hover{ background:#1a1a1a; }
+.active{ background:#282828; }
+
+.main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  margin-left:200px;
+}
+
+.cover{
+  width:260px;
+  height:260px;
+  border-radius:12px;
+  margin-bottom:20px;
+}
+
+.player{
+  position:fixed;
+  bottom:0;
+  width:100%;
+  background:#181818;
+  padding:15px;
+  display:flex;
+  align-items:center;
+  z-index:1;
+}
+
+.controls{
+  display:flex;
+  gap:15px;
+}
+
+button{
+  background:none;
+  border:none;
+  color:white;
+  font-size:22px;
+  cursor:pointer;
+}
+
+button:hover{ transform:scale(1.2); }
+
+.progress{
+  flex:1;
+  margin:0 20px;
+  height:6px;
+  background:#333;
+  cursor:pointer;
+  border-radius:5px;
+}
+
+.bar{
+  height:100%;
+  width:0%;
+  background:#1db954;
+}
+
+#volume{
+  width:100px;
+}
+
+#search{
+  width:100%;
+  padding:10px;
+  margin-bottom:10px;
+  border:none;
+  border-radius:6px;
+}
+
+#spotifyResults div{
+  padding:8px;
+  cursor:pointer;
+}
+
+#spotifyResults div:hover{
+  background:#222;
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="heartCanvas"></canvas>
+
+<div class="container">
+  <div class="sidebar">
+    <input type="text" id="search" placeholder="Spotify'da ara...">
+    <div id="spotifyResults"></div>
+    <div id="playlist"></div>
+  </div>
+
+  <div class="main">
+    <img id="cover" class="cover">
+    <h2 id="title"></h2>
+    <p id="artist"></p>
+    <div id="spotifyPlayer"></div>
+  </div>
+</div>
+
+<div class="player">
+  <div class="controls">
+    <button onclick="prevSong()">⏮</button>
+    <button onclick="togglePlay()">▶</button>
+    <button onclick="nextSong()">⏭</button>
+  </div>
+
+  <div class="progress" onclick="seek(event)">
+    <div class="bar" id="bar"></div>
+  </div>
+
+  <input type="range" id="volume" min="0" max="1" step="0.01" value="1">
+</div>
+
+<audio id="audio"></audio>
+
+<script>
+
+// SONGS
+const songs = [
+  {title:"Saygımdan",artist:"Bengü",src:"song1.mp3",cover:"cover1.jpg",color:"#ff4d88"},
+  {title:"Kül",artist:"Merve Özbey",src:"song2.mp3",cover:"cover2.jpg",color:"#1db954"},
+  {title:"Yorgun",artist:"Ceren Sagu",src:"song3.mp3",cover:"cover3.jpg",color:"#4da6ff"},
+  {title:"Sonsuz Ol",artist:"Yalın",src:"song4.mp3",cover:"cover4.jpg",color:"#ffa64d"},
+  {title:"Mahşer",artist:"Ebru Gündeş",src:"song5.mp3",cover:"cover5.jpg",color:"#9b59b6"}
+];
+
+const audio = document.getElementById("audio");
+const playlist = document.getElementById("playlist");
+const bar = document.getElementById("bar");
+const volume = document.getElementById("volume");
+
+let current = 0;
+let playing = false;
+let currentColor = "#ff4d88";
+
+// PLAYLIST
+songs.forEach((s,i)=>{
+  let div = document.createElement("div");
+  div.className="song";
+  div.innerText = s.title + " - " + s.artist;
+  div.onclick=()=>loadSong(i);
+  playlist.appendChild(div);
+});
+
+function highlight(){
+  document.querySelectorAll(".song").forEach((el,i)=>{
+    el.classList.toggle("active",i===current);
+  });
+}
+
+function setBackground(color){
+  document.body.style.background =
+    `radial-gradient(circle at top, ${color}, #000)`;
+}
+
+function loadSong(i){
+  current=i;
+  let s=songs[i];
+
+  audio.src=s.src;
+  document.getElementById("title").innerText=s.title;
+  document.getElementById("artist").innerText=s.artist;
+  document.getElementById("cover").src=s.cover;
+
+  currentColor = s.color;
+  setBackground(s.color);
+
+  highlight();
+  audio.play();
+  playing=true;
+}
+
+function togglePlay(){
+  playing ? audio.pause() : audio.play();
+  playing=!playing;
+}
+
+function nextSong(){
+  current=(current+1)%songs.length;
+  loadSong(current);
+}
+
+function prevSong(){
+  current=(current-1+songs.length)%songs.length;
+  loadSong(current);
+}
+
+audio.addEventListener("timeupdate",()=>{
+  bar.style.width=(audio.currentTime/audio.duration)*100+"%";
+});
+
+audio.addEventListener("ended",nextSong);
+
+volume.addEventListener("input",()=>{
+  audio.volume = volume.value;
+});
+
+function seek(e){
+  let percent = e.offsetX / e.target.clientWidth;
+  audio.currentTime = percent * audio.duration;
+}
+
+document.addEventListener("click",()=>{
+  audio.play();
+},{once:true});
+
+loadSong(0);
+
+// SPOTIFY SEARCH (itunes proxy)
+const searchInput = document.getElementById("search");
+const resultsDiv = document.getElementById("spotifyResults");
+
+searchInput.addEventListener("input", async () => {
+  let query = searchInput.value;
+  if(query.length < 3) return;
+
+  let res = await fetch(`https://api.allorigins.win/raw?url=https://itunes.apple.com/search?term=${query}&entity=song&limit=5`);
+  let data = await res.json();
+
+  resultsDiv.innerHTML = "";
+
+  data.results.forEach(song => {
+    let div = document.createElement("div");
+    div.innerText = song.trackName + " - " + song.artistName;
+
+    div.onclick = () => {
+      document.getElementById("spotifyPlayer").innerHTML = `
+        <iframe style="border-radius:12px"
+        src="https://open.spotify.com/embed/track/${song.trackId}"
+        width="100%" height="152"
+        frameBorder="0"
+        allow="autoplay; clipboard-write; encrypted-media;">
+        </iframe>
+      `;
+    };
+
+    resultsDiv.appendChild(div);
+  });
+});
+
+//////////////////////////
+// HEART ANIMATION (SOFT)
+//////////////////////////
+
+const canvas = document.getElementById('heartCanvas');
+const ctx = canvas.getContext('2d');
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const traceCount = 50;
+const dr = 0.1;
+
+const pointsOrigin = [];
+const targetPoints = [];
+const particles = [];
+const maxParticles = 300;
+
+function heartPosition(t) {
+  return [
+    Math.pow(Math.sin(t), 3),
+    -(15 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))
+  ];
+}
+
+function scaleAndTranslate(pos, sx, sy, dx, dy) {
+  return [dx + pos[0] * sx, dy + pos[1] * sy];
+}
+
+function generateHeartPoints() {
+  pointsOrigin.length = 0;
+
+  const scales = [
+    { scale: 210, sy: 13 },
+    { scale: 150, sy: 9 },
+    { scale: 90, sy: 5 }
+  ];
+
+  scales.forEach(({scale, sy}) => {
+    for (let i = 0; i < Math.PI * 2; i += dr) {
+      pointsOrigin.push(scaleAndTranslate(heartPosition(i), scale, sy, 0, 0));
+    }
+  });
+
+  updatePulse(1, 1);
+}
+
+function updatePulse(kx, ky) {
+  targetPoints.length = 0;
+
+  for (let i = 0; i < pointsOrigin.length; i++) {
+    targetPoints[i] = [
+      kx * pointsOrigin[i][0] + canvas.width / 2,
+      ky * pointsOrigin[i][1] + canvas.height / 2
+    ];
+  }
+}
+
+function createParticles() {
+  particles.length = 0;
+
+  for (let i = 0; i < maxParticles; i++) {
+    const x = Math.random() * canvas.width;
+    const y = Math.random() * canvas.height;
+
+    particles.push({
+      vx: 0,
+      vy: 0,
+      speed: Math.random() + 5,
+      q: Math.floor(Math.random() * pointsOrigin.length),
+      D: 2 * (i % 2) - 1,
+      force: 0.2 * Math.random() + 0.7,
+      trace: Array(traceCount).fill().map(() => ({ x, y }))
+    });
+  }
+}
+
+const config = {
+  traceK: 0.4,
+  timeDelta: 0.01
+};
+
+let time = 0;
+
+function animate() {
+  const n = -Math.cos(time);
+
+  updatePulse((1 + n) * 0.5, (1 + n) * 0.5);
+
+  time += ((Math.sin(time)) < 0 ? 9 : (n > 0.8) ? 0.2 : 1) * config.timeDelta;
+
+  ctx.fillStyle = "rgba(0,0,0,.15)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
+    const q = targetPoints[p.q] || targetPoints[0];
+
+    const dx = p.trace[0].x - q[0];
+    const dy = p.trace[0].y - q[1];
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance < 10) {
+      p.q = Math.floor(Math.random() * pointsOrigin.length);
+    }
+
+    p.vx += -dx / distance * p.speed;
+    p.vy += -dy / distance * p.speed;
+
+    p.trace[0].x += p.vx;
+    p.trace[0].y += p.vy;
+
+    p.vx *= p.force;
+    p.vy *= p.force;
+
+    for (let k = 0; k < p.trace.length - 1;) {
+      const pt = p.trace[k];
+      const pt2 = p.trace[++k];
+      pt2.x -= config.traceK * (pt2.x - pt.x);
+      pt2.y -= config.traceK * (pt2.y - pt.y);
+    }
+
+    ctx.fillStyle = currentColor + "55";
+
+    for (let k = 0; k < p.trace.length; k++) {
+      ctx.fillRect(p.trace[k].x, p.trace[k].y, 1, 1);
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  generateHeartPoints();
+});
+
+generateHeartPoints();
+createParticles();
+animate();
+
+</script>
+
+</body>
+</html>
+```
